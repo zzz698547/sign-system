@@ -92,10 +92,10 @@ app.post("/sign", async (req, res) => {
 
     y -= 10;
 
-    // ⭐ 合約內容
+    // ⭐ 合約內容（左對齊條列）
     const contractX = 50;
     const contractW = 495;
-    const contractH = 260;
+    const contractH = 300; // 高度加大適應完整條款
     const contractY = y - contractH;
 
     page.drawRectangle({
@@ -109,13 +109,19 @@ app.post("/sign", async (req, res) => {
     });
 
     const contractText = `
-一、委任期間：自簽約日起三十日止。
-二、報酬：核准金額15%。
-三、違約：50,000元。
-四、資料需真實。
-五、同意聯徵。
-六、變更需書面。
-七、通訊簽署等同親簽。
+一、委任期間：自簽約日起三十日止，經雙方書面同意得延展。
+
+二、報酬：約定於撥款後，扣除銀行或融資機構內扣費用後，依核准金額之15%支付乙方顧問服務費，另付諮詢作業費新台幣3,500元整。
+
+三、違約：違約金50,000元，仍須支付服務費。
+
+四、文件與保密：資料需真實，並負保密責任。
+
+五、聯徵查詢：同意查詢信用資料。
+
+六、契約變更終止：須書面同意。
+
+七、簽署方式：通訊簽署等同親簽。
 `;
 
     let textY = contractY + contractH - 20;
@@ -123,14 +129,15 @@ app.post("/sign", async (req, res) => {
     contractText.split("\n").forEach(line => {
       if (line.trim()) {
         page.drawText(line.trim(), {
-          x: contractX + 20,
+          x: contractX + 10,  // 左對齊稍微內縮
           y: textY,
           size: 12,
-          font
+          font,
+          color: rgb(0, 0, 0)
         });
-        textY -= 16;
+        textY -= 18; // 行距
       } else {
-        textY -= 10;
+        textY -= 10; // 空行間距
       }
     });
 
