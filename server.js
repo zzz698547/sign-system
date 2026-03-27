@@ -26,7 +26,7 @@ if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
 }
 
 /* =========================
-   ⭐ 首頁（關鍵修正）
+   ⭐ 首頁
 ========================= */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
@@ -92,10 +92,10 @@ app.post("/sign", async (req, res) => {
 
     y -= 10;
 
-    // ⭐ 合約內容（左對齊條列）
+    // ⭐ 合約內容矩形
     const contractX = 50;
     const contractW = 495;
-    const contractH = 300; // 高度加大適應完整條款
+    const contractH = 300;
     const contractY = y - contractH;
 
     page.drawRectangle({
@@ -107,6 +107,32 @@ app.post("/sign", async (req, res) => {
       borderColor: rgb(0.8, 0.8, 0.8),
       borderWidth: 1,
     });
+
+    // ⭐ 自動換行函式
+    function drawWrappedText(page, text, x, y, maxWidth, font, fontSize, lineHeight) {
+      const chars = text.split(""); // 中文逐字
+      let line = "";
+      let textY = y;
+
+      chars.forEach(char => {
+        const testLine = line + char;
+        const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+        if (testWidth > maxWidth) {
+          page.drawText(line, { x, y: textY, size: fontSize, font });
+          line = char;
+          textY -= lineHeight;
+        } else {
+          line = testLine;
+        }
+      });
+
+      if (line) {
+        page.drawText(line, { x, y: textY, size: fontSize, font });
+        textY -= lineHeight;
+      }
+
+      return textY;
+    }
 
     const contractText = `
 一、委任期間：自簽約日起三十日止，經雙方書面同意得延展。
@@ -125,19 +151,10 @@ app.post("/sign", async (req, res) => {
 `;
 
     let textY = contractY + contractH - 20;
-
     contractText.split("\n").forEach(line => {
       if (line.trim()) {
-        page.drawText(line.trim(), {
-          x: contractX + 10,  // 左對齊稍微內縮
-          y: textY,
-          size: 12,
-          font,
-          color: rgb(0, 0, 0)
-        });
-        textY -= 18; // 行距
-      } else {
-        textY -= 10; // 空行間距
+        textY = drawWrappedText(page, line.trim(), contractX + 10, textY, contractW - 20, font, 12, 18);
+        textY -= 8; // 段落間距
       }
     });
 
