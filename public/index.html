@@ -239,8 +239,7 @@ async function submitForm(){
     try {
         const resp = await fetch("/sign",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data) });
         if(resp.ok){
-            alert("✅ 簽約完成，PDF已寄到信箱！");
-            clearCanvas();
+            window.location.href = "success.html";
         } else {
             alert("❌ 簽約失敗，請稍後再試");
         }
