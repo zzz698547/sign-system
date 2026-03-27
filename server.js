@@ -1,3 +1,4 @@
+// server.js
 require('dotenv').config();
 const express = require("express");
 const fs = require("fs");
@@ -10,18 +11,22 @@ const app = express();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
+// ⭐ 簽名檔存放資料夾
 const signDir = path.join(__dirname, "sign_data");
 if (!fs.existsSync(signDir)) fs.mkdirSync(signDir);
 
+// ⭐ 確認環境變數
 if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.warn("⚠️ 請設定 EMAIL_USER / EMAIL_PASS");
 }
 
+// ⭐ 首頁
 app.get("/", (req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
 
+// ⭐ 簽約 API
 app.post("/sign", async (req,res)=>{
     try{
-        const { name, id, phone, address, signature, time, ip, email } = req.body;
+        const { name, id, phone, address, signature, time, ip } = req.body;
 
         if(!signature || !signature.includes("base64")){
             return res.status(400).json({ error: "簽名資料不正確" });
@@ -39,11 +44,13 @@ app.post("/sign", async (req,res)=>{
         const width = page.getWidth();
         let y = 780;
 
+        // 標題
         const title = "貸 款 委 任 契 約 書";
         const titleSize = 28;
         page.drawText(title, { x: (width - font.widthOfTextAtSize(title,titleSize))/2, y, size: titleSize, font, color: rgb(0,0,0.6) });
         y -= 50;
 
+        // 使用者資料
         const fields = [
             `姓名: ${name}`,
             `身分證: ${id}`,
@@ -59,11 +66,12 @@ app.post("/sign", async (req,res)=>{
         });
         y -= 10;
 
+        // 合約矩形
         const contractX = 50, contractW = 495, contractH = 300;
         const contractY = y - contractH;
-
         page.drawRectangle({ x: contractX, y: contractY, width: contractW, height: contractH, color: rgb(0.97,0.97,0.97), borderColor: rgb(0.8,0.8,0.8), borderWidth:1 });
 
+        // 自動換行函式
         function drawWrappedText(page,text,x,y,maxWidth,font,fontSize,lineHeight){
             const chars = text.split("");
             let line="", textY=y;
@@ -96,7 +104,7 @@ app.post("/sign", async (req,res)=>{
 `;
         let textY = contractY+contractH-20;
         contractText.split("\n").forEach(line=>{
-            if(line.trim()) textY=drawWrappedText(page,line.trim(),contractX+10,textY,contractW-20,font,12,18)-8;
+            if(line.trim()) textY = drawWrappedText(page,line.trim(),contractX+10,textY,contractW-20,font,12,18)-8;
         });
 
         // 簽名
@@ -112,28 +120,34 @@ app.post("/sign", async (req,res)=>{
 
         res.json({ ok:true, file:fileName });
 
-        // 寄信
+        // ⭐ 自動寄信到自己
         if(process.env.EMAIL_USER && process.env.EMAIL_PASS){
-            const sendTo = email || process.env.EMAIL_USER;
-            (async()=>{
+            (async ()=>{
                 try{
                     const transporter = nodemailer.createTransport({
                         service:"gmail",
                         auth:{ user:process.env.EMAIL_USER, pass:process.env.EMAIL_PASS }
                     });
+
                     await transporter.sendMail({
                         from: process.env.EMAIL_USER,
-                        to: sendTo,
-                        subject: "合約PDF",
-                        text: "您的合約PDF已附上",
+                        to: process.env.EMAIL_USER,  // 直接寄給自己
+                        subject: "您的合約PDF",
+                        text: "合約PDF已附上，請查收",
                         attachments:[{filename:fileName,path:filePath}]
                     });
-                    console.log("📩 已寄出");
-                } catch(err){ console.error("寄信錯誤",err); }
+
+                    console.log("📩 已寄出 PDF");
+                }catch(err){
+                    console.error("寄信錯誤", err);
+                }
             })();
         }
 
-    } catch(err){ console.error(err); res.status(500).json({ error:"簽約失敗" }); }
+    }catch(err){
+        console.error(err);
+        res.status(500).json({ error:"簽約失敗" });
+    }
 });
 
 const PORT = process.env.PORT||3000;
