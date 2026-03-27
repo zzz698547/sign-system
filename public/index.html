@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>貸款委任契約書</title>
-
 <style>
 body {
     font-family: "Noto Sans TC", Arial;
@@ -11,7 +10,6 @@ body {
     background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
 }
 
-/* 外框 */
 .container {
     max-width: 650px;
     margin: 50px auto;
@@ -19,7 +17,7 @@ body {
     border-radius: 16px;
     padding: 30px;
     box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-    position: relative; /* ⭐ 讓logo定位用 */
+    position: relative;
 }
 
 .header {
@@ -51,7 +49,6 @@ body {
     padding: 10px 0;
 }
 
-/* 輸入框 */
 input {
     width: 100%;
     padding: 12px;
@@ -61,7 +58,6 @@ input {
     font-size: 14px;
 }
 
-/* 合約 */
 .contract-box {
     border: 1px solid #ddd;
     padding: 18px;
@@ -74,7 +70,6 @@ input {
     margin-top: 10px;
 }
 
-/* 同意區 */
 .agree-row {
     display: flex;
     align-items: center;
@@ -88,7 +83,6 @@ input {
     height: 20px;
 }
 
-/* 簽名 */
 canvas {
     border: 2px dashed #999;
     border-radius: 10px;
@@ -101,7 +95,6 @@ canvas {
     font-weight: bold;
 }
 
-/* 按鈕 */
 .clear-btn {
     margin-top: 8px;
     background: #888;
@@ -129,33 +122,16 @@ canvas {
     opacity: 0.9;
 }
 
-/* 手機版 */
 @media screen and (max-width: 768px) {
-    .logo {
-        left: 10px;
-        top: -20px;
-        height: 100px;
-    }
-
-    .title {
-        font-size: 32px;
-        padding: 5px 0;
-    }
-
-    .header {
-        margin-top: -5px;
-        margin-bottom: 20px;
-    }
+    .logo { left: 10px; top: -20px; height: 100px; }
+    .title { font-size: 32px; padding: 5px 0; }
+    .header { margin-top: -5px; margin-bottom: 20px; }
 }
 </style>
-
 </head>
 
 <body>
-
 <div class="container">
-
-<!-- 標題 -->
 <div class="header">
     <img src="logo.png" class="logo">
     <div class="title">貸 款 委 任 契 約 書</div>
@@ -165,6 +141,7 @@ canvas {
 <input id="id" placeholder="身分證字號">
 <input id="phone" placeholder="電話">
 <input id="address" placeholder="地址">
+<input id="email" placeholder="Email (選填)">
 
 <div class="contract-box">
 一、委任期間：自簽約日起三十日止，經雙方書面同意得延展。<br><br>
@@ -184,9 +161,7 @@ canvas {
 <div class="sign-title">簽名</div>
 <canvas id="sign" width="500" height="200"></canvas>
 <button class="clear-btn" onclick="clearCanvas()">清除簽名</button>
-
 <button class="submit-btn" onclick="submitForm()">確認簽約</button>
-
 </div>
 
 <script>
@@ -194,71 +169,58 @@ let canvas = document.getElementById("sign");
 let ctx = canvas.getContext("2d");
 let drawing = false;
 
-// 計算比例解決 CSS 寬度導致座標偏差
+// 讓 canvas 適應螢幕尺寸
+function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+// 取得滑鼠或觸控座標
 function getCanvasCoords(e){
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     let clientX, clientY;
 
-    if(e.touches){ // 觸控事件
+    if(e.touches){ // 觸控
         clientX = e.touches[0].clientX;
         clientY = e.touches[0].clientY;
-    } else { // 滑鼠事件
+    } else {
         clientX = e.clientX;
         clientY = e.clientY;
     }
-
-    const x = (clientX - rect.left) * scaleX;
-    const y = (clientY - rect.top) * scaleY;
-    return {x, y};
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
 }
 
-// ---------- 監聽滑鼠事件 ----------
-canvas.addEventListener("mousedown", (e) => { drawing = true; const {x,y} = getCanvasCoords(e); ctx.moveTo(x,y); });
-canvas.addEventListener("mousemove", (e) => {
-    if(!drawing) return;
-    const {x,y} = getCanvasCoords(e);
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.lineTo(x,y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x,y);
-});
-canvas.addEventListener("mouseup", () => { drawing = false; ctx.beginPath(); });
-canvas.addEventListener("mouseleave", () => { drawing = false; ctx.beginPath(); });
+// 監聽事件
+canvas.addEventListener("mousedown", (e) => { drawing=true; const {x,y}=getCanvasCoords(e); ctx.moveTo(x,y); });
+canvas.addEventListener("mousemove", (e) => { if(!drawing) return; const {x,y}=getCanvasCoords(e); ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineTo(x,y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x,y); });
+canvas.addEventListener("mouseup", () => { drawing=false; ctx.beginPath(); });
+canvas.addEventListener("mouseleave", () => { drawing=false; ctx.beginPath(); });
 
-// ---------- 監聽觸控事件（手機板） ----------
-canvas.addEventListener("touchstart", (e) => { e.preventDefault(); drawing = true; const {x,y} = getCanvasCoords(e); ctx.moveTo(x,y); });
-canvas.addEventListener("touchmove", (e) => { e.preventDefault(); if(!drawing) return; const {x,y} = getCanvasCoords(e); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.lineTo(x,y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x,y); });
-canvas.addEventListener("touchend", (e) => { e.preventDefault(); drawing = false; ctx.beginPath(); });
+canvas.addEventListener("touchstart", (e) => { e.preventDefault(); drawing=true; const {x,y}=getCanvasCoords(e); ctx.moveTo(x,y); });
+canvas.addEventListener("touchmove", (e) => { e.preventDefault(); if(!drawing) return; const {x,y}=getCanvasCoords(e); ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineTo(x,y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x,y); });
+canvas.addEventListener("touchend", (e) => { e.preventDefault(); drawing=false; ctx.beginPath(); });
 
-// 清除簽名
-function clearCanvas(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-}
+function clearCanvas(){ ctx.clearRect(0,0,canvas.width,canvas.height); }
 
 // 提交表單
 async function submitForm(){
-    if(!document.getElementById("agree").checked){
-        alert("請先同意條款");
-        return;
-    }
-
-    if(canvas.toDataURL().length < 5000){
-        alert("請簽名");
-        return;
-    }
+    if(!document.getElementById("agree").checked){ alert("請先同意條款"); return; }
+    if(canvas.toDataURL().length < 5000){ alert("請簽名"); return; }
 
     let data = {
         name: document.getElementById("name").value,
         id: document.getElementById("id").value,
         phone: document.getElementById("phone").value,
         address: document.getElementById("address").value,
+        email: document.getElementById("email").value,
         signature: canvas.toDataURL(),
         time: new Date().toLocaleString(),
-        ip: "127.0.0.1" // 可以讓 server 後端抓真實 IP
+        ip: "127.0.0.1"
     };
 
     const resp = await fetch("/sign", {
@@ -267,13 +229,9 @@ async function submitForm(){
         body: JSON.stringify(data)
     });
 
-    if(resp.ok){
-        window.location.href = "success.html";
-    } else {
-        alert("❌ 簽約失敗，請稍後再試");
-    }
+    if(resp.ok){ window.location.href = "success.html"; }
+    else{ alert("❌ 簽約失敗，請稍後再試"); }
 }
 </script>
-
 </body>
 </html>
