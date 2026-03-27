@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>貸款委任契約書</title>
@@ -10,7 +10,7 @@ body {
     background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
 }
 
-/* 容器 */
+/* 外框 */
 .container {
     max-width: 650px;
     margin: 50px auto;
@@ -26,6 +26,7 @@ body {
     width: 100%;
     text-align: center;
     margin-bottom: 40px;
+    margin-top: -10px;
 }
 
 .logo {
@@ -127,6 +128,44 @@ canvas {
     opacity: 0.9;
 }
 
+/* Loading Overlay */
+#loadingOverlay {
+    display: none;
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    text-align: center;
+}
+
+#loadingOverlay .spinner-container {
+    position: absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%, -50%);
+    color:white;
+    font-size:18px;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.spinner {
+    border: 6px solid rgba(255,255,255,0.3);
+    border-top: 6px solid #fff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg);}
+    100% { transform: rotate(360deg);}
+}
+
 /* 手機版 */
 @media screen and (max-width: 768px) {
     .logo {
@@ -148,21 +187,29 @@ canvas {
 </style>
 </head>
 <body>
-<div class="container">
-    <!-- 標題 -->
-    <div class="header">
-        <img src="logo.png" class="logo">
-        <div class="title">貸 款 委 任 契 約 書</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+    <div class="spinner-container">
+        <div class="spinner"></div>
+        <div>請稍後，正在處理中...</div>
     </div>
+</div>
 
-    <!-- 輸入欄位 -->
-    <input id="name" placeholder="姓名">
-    <input id="id" placeholder="身分證字號">
-    <input id="phone" placeholder="電話">
-    <input id="address" placeholder="地址">
+<div class="container">
 
-    <!-- 合約內容 -->
-    <div class="contract-box">
+<!-- 標題 -->
+<div class="header">
+    <img src="logo.png" class="logo">
+    <div class="title">貸 款 委 任 契 約 書</div>
+</div>
+
+<input id="name" placeholder="姓名">
+<input id="id" placeholder="身分證字號">
+<input id="phone" placeholder="電話">
+<input id="address" placeholder="地址">
+
+<div class="contract-box">
 一、委任期間：自簽約日起三十日止，經雙方書面同意得延展。<br><br>
 二、報酬：約定於撥款後，扣除銀行或融資機構內扣費用後，依核准金額之15%支付乙方顧問服務費，另付諮詢作業費新台幣3,500元整。<br><br>
 三、違約：違約金50,000元，仍須支付服務費。<br><br>
@@ -170,84 +217,95 @@ canvas {
 五、聯徵查詢：同意查詢信用資料。<br><br>
 六、契約變更終止：須書面同意。<br><br>
 七、簽署方式：通訊簽署等同親簽。
-    </div>
+</div>
 
-    <!-- 同意條款 -->
-    <div class="agree-row">
-        <input type="checkbox" id="agree">
-        <label>我已閱讀並同意以上所有條款</label>
-    </div>
+<div class="agree-row">
+<input type="checkbox" id="agree">
+<label>我已閱讀並同意以上所有條款</label>
+</div>
 
-    <!-- 簽名 -->
-    <div class="sign-title">簽名</div>
-    <canvas id="sign" width="500" height="200"></canvas>
-    <button class="clear-btn" onclick="clearCanvas()">清除簽名</button>
+<div class="sign-title">簽名</div>
+<canvas id="sign" width="500" height="200"></canvas>
+<button class="clear-btn" onclick="clearCanvas()">清除簽名</button>
 
-    <button class="submit-btn" onclick="submitForm()">確認簽約</button>
+<button class="submit-btn" onclick="submitForm()">確認簽約</button>
+
 </div>
 
 <script>
-// ---------- Canvas 簽名 ----------
 let canvas = document.getElementById("sign");
 let ctx = canvas.getContext("2d");
 let drawing = false;
 
+// 計算比例
 function getCanvasCoords(e){
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     let clientX, clientY;
-    if(e.touches){
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-    } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-    }
-    return {x:(clientX-rect.left)*scaleX, y:(clientY-rect.top)*scaleY};
+    if(e.touches){ clientX=e.touches[0].clientX; clientY=e.touches[0].clientY; }
+    else { clientX=e.clientX; clientY=e.clientY; }
+    const x=(clientX-rect.left)*scaleX;
+    const y=(clientY-rect.top)*scaleY;
+    return {x,y};
 }
 
 canvas.addEventListener("mousedown",(e)=>{drawing=true; const {x,y}=getCanvasCoords(e); ctx.moveTo(x,y);});
-canvas.addEventListener("mousemove",(e)=>{if(!drawing)return; const {x,y}=getCanvasCoords(e); ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineTo(x,y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x,y);});
+canvas.addEventListener("mousemove",(e)=>{if(!drawing) return; const {x,y}=getCanvasCoords(e); ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineTo(x,y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x,y);});
 canvas.addEventListener("mouseup",()=>{drawing=false; ctx.beginPath();});
 canvas.addEventListener("mouseleave",()=>{drawing=false; ctx.beginPath();});
 
 canvas.addEventListener("touchstart",(e)=>{e.preventDefault(); drawing=true; const {x,y}=getCanvasCoords(e); ctx.moveTo(x,y);});
-canvas.addEventListener("touchmove",(e)=>{e.preventDefault(); if(!drawing)return; const {x,y}=getCanvasCoords(e); ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineTo(x,y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x,y);});
+canvas.addEventListener("touchmove",(e)=>{e.preventDefault(); if(!drawing) return; const {x,y}=getCanvasCoords(e); ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineTo(x,y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x,y);});
 canvas.addEventListener("touchend",(e)=>{e.preventDefault(); drawing=false; ctx.beginPath();});
 
 // 清除簽名
-function clearCanvas(){ ctx.clearRect(0,0,canvas.width,canvas.height); }
+function clearCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height);}
 
-// ---------- 提交表單 ----------
+// 提交表單
 async function submitForm(){
-    if(!document.getElementById("agree").checked){
-        alert("請先同意條款"); return;
-    }
-    if(canvas.toDataURL().length < 5000){
-        alert("請簽名"); return;
-    }
-    const data = {
-        name: document.getElementById("name").value,
-        id: document.getElementById("id").value,
-        phone: document.getElementById("phone").value,
-        address: document.getElementById("address").value,
-        signature: canvas.toDataURL(),
-        time: new Date().toLocaleString(),
-        ip: "127.0.0.1"
+    if(!document.getElementById("agree").checked){ alert("請先同意條款"); return; }
+    if(canvas.toDataURL().length < 5000){ alert("請簽名"); return; }
+
+    // 顯示 loading
+    document.getElementById("loadingOverlay").style.display="block";
+
+    let data={
+        name:document.getElementById("name").value,
+        id:document.getElementById("id").value,
+        phone:document.getElementById("phone").value,
+        address:document.getElementById("address").value,
+        signature:canvas.toDataURL(),
+        time:new Date().toLocaleString(),
+        ip:"127.0.0.1"
     };
-    try {
-        const resp = await fetch("/sign",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data) });
-        if(resp.ok){
-            window.location.href = "success.html";
+
+    try{
+        const resp=await fetch("/sign",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(data)
+        });
+        const result=await resp.json();
+        if(resp.ok && result.ok){
+            // 下載 PDF 按鈕
+            const a=document.createElement("a");
+            a.href="/sign_data/"+result.file;
+            a.download=result.file;
+            a.click();
+
+            window.location.href="success.html";
         } else {
             alert("❌ 簽約失敗，請稍後再試");
         }
-    } catch(e){
-        alert("❌ 伺服器錯誤");
-        console.error(e);
+    } catch(err){
+        console.error(err);
+        alert("❌ 簽約失敗，請稍後再試");
+    } finally{
+        document.getElementById("loadingOverlay").style.display="none";
     }
 }
 </script>
+
 </body>
 </html>
