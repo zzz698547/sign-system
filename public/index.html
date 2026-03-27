@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>貸款委任契約書</title>
+
+<style>
+body {
+    font-family: "Noto Sans TC", Arial;
+    margin: 0;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+}
+
+/* 外框 */
+.container {
+    max-width: 650px;
+    margin: 50px auto;
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    position: relative; /* ⭐ 讓logo定位用 */
+}
+
+.header {
+    position: relative;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 40px;
+    margin-top: -10px;
+}
+
+.logo {
+    position: absolute;
+    left: -30px;
+    top: -50px;
+    height: 200px;
+    width: auto;
+}
+
+.title {
+    font-size: 48px;
+    font-weight: bold;
+    color: #003366;
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    background: linear-gradient(90deg, #003366, #0066cc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+    margin: 0 auto;
+    padding: 10px 0;
+}
+
+/* 輸入框 */
+input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+/* 合約 */
+.contract-box {
+    border: 1px solid #ddd;
+    padding: 18px;
+    height: 260px;
+    overflow-y: auto;
+    background: #fafafa;
+    border-radius: 10px;
+    line-height: 1.8;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+/* 同意區 */
+.agree-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0;
+    font-size: 14px;
+}
+
+.agree-row input {
+    width: 20px;
+    height: 20px;
+}
+
+/* 簽名 */
+canvas {
+    border: 2px dashed #999;
+    border-radius: 10px;
+    width: 100%;
+    background: #fff;
+}
+
+.sign-title {
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+/* 按鈕 */
+.clear-btn {
+    margin-top: 8px;
+    background: #888;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.submit-btn {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(45deg, #000, #444);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.submit-btn:hover {
+    opacity: 0.9;
+}
+
+/* 手機版 */
+@media screen and (max-width: 768px) {
+    .logo {
+        left: 10px;
+        top: -20px;
+        height: 100px;
+    }
+
+    .title {
+        font-size: 32px;
+        padding: 5px 0;
+    }
+
+    .header {
+        margin-top: -5px;
+        margin-bottom: 20px;
+    }
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- 標題 -->
+<div class="header">
+    <img src="logo.png" class="logo">
+    <div class="title">貸 款 委 任 契 約 書</div>
+</div>
+
+<input id="name" placeholder="姓名">
+<input id="id" placeholder="身分證字號">
+<input id="phone" placeholder="電話">
+<input id="address" placeholder="地址">
+
+<div class="contract-box">
+一、委任期間：自簽約日起三十日止，經雙方書面同意得延展。<br><br>
+二、報酬：約定於撥款後，扣除銀行或融資機構內扣費用後，依核准金額之15%支付乙方顧問服務費，另付諮詢作業費新台幣3,500元整。<br><br>
+三、違約：違約金50,000元，仍須支付服務費。<br><br>
+四、文件與保密：資料需真實，並負保密責任。<br><br>
+五、聯徵查詢：同意查詢信用資料。<br><br>
+六、契約變更終止：須書面同意。<br><br>
+七、簽署方式：通訊簽署等同親簽。
+</div>
+
+<div class="agree-row">
+<input type="checkbox" id="agree">
+<label>我已閱讀並同意以上所有條款</label>
+</div>
+
+<div class="sign-title">簽名</div>
+<canvas id="sign" width="500" height="200"></canvas>
+<button class="clear-btn" onclick="clearCanvas()">清除簽名</button>
+
+<button class="submit-btn" onclick="submitForm()">確認簽約</button>
+
+</div>
+
+<script>
+let canvas = document.getElementById("sign");
+let ctx = canvas.getContext("2d");
+let drawing = false;
+
+// 計算比例解決 CSS 寬度導致座標偏差
+function getCanvasCoords(e){
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    return {x, y};
+}
+
+canvas.addEventListener("mousedown", () => drawing = true);
+canvas.addEventListener("mouseup", () => { drawing = false; ctx.beginPath(); });
+canvas.addEventListener("mouseleave", () => { drawing = false; ctx.beginPath(); });
+canvas.addEventListener("mousemove", (e) => {
+    if(!drawing) return;
+    const {x,y} = getCanvasCoords(e);
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineTo(x,y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+});
+
+function clearCanvas(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+async function submitForm(){
+    if(!document.getElementById("agree").checked){
+        alert("請先同意條款");
+        return;
+    }
+
+    if(canvas.toDataURL().length < 5000){
+        alert("請簽名");
+        return;
+    }
+
+    let data = {
+        name: document.getElementById("name").value,
+        id: document.getElementById("id").value,
+        phone: document.getElementById("phone").value,
+        address: document.getElementById("address").value,
+        signature: canvas.toDataURL(),
+        time: new Date().toLocaleString(),
+        ip: "127.0.0.1" // 可以讓 server 後端抓真實 IP
+    };
+
+    const resp = await fetch("/sign", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(data)
+    });
+
+    if(resp.ok){
+        window.location.href = "success.html";
+    } else {
+        alert("❌ 簽約失敗，請稍後再試");
+    }
+}
+</script>
+
+</body>
+</html>
