@@ -45,7 +45,8 @@ app.get("/health", (req, res) => {
 // ⭐ 簽約 API
 app.post("/sign", async (req, res) => {
     try {
-        const { name, id, phone, address, signature, time, ip } = req.body;
+        const { name, id, phone, address, signature, percent, consultFee, remaining, time } = req.body;
+	const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || "unknown";  // ⭐ 自動抓 IP
 
         if (!signature || !signature.includes("base64")) {
             return res.status(400).json({ error: "簽名資料不正確" });
@@ -106,15 +107,20 @@ app.post("/sign", async (req, res) => {
             return textY - lineHeight;
         }
 
+        // ⭐ 動態合約內容
         const contractText = `
+甲方：將御線上理財平臺
+乙方：${name}
+
 一、委任期間：自簽約日起三十日止，經雙方書面同意得延展。
-二、報酬：約定於撥款後，扣除銀行或融資機構內扣費用後，依核准金額之15%支付乙方顧問服務費，另付諮詢作業費新台幣3,500元整。
+二、報酬：約定於撥款後，扣除銀行或融資機構內扣費用後，依核准金額之${percent}%支付乙方顧問服務費，另付諮詢作業費新台幣${consultFee}元整，尚未收齊差額為${remaining}元。
 三、違約：違約金50,000元，仍須支付服務費。
 四、文件與保密：資料需真實，並負保密責任。
 五、聯徵查詢：同意查詢信用資料。
 六、契約變更終止：須書面同意。
 七、簽署方式：通訊簽署等同親簽。
 `;
+
         let textY = contractY + contractH - 20;
         contractText.split("\n").forEach(line => {
             if (line.trim()) textY = drawWrappedText(page, line.trim(), contractX + 10, textY, contractW - 20, font, 12, 18) - 8;
