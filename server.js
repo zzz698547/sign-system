@@ -21,33 +21,36 @@ if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
 }
 
 // ⭐ 首頁
-app.get("/", (req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+
+// ⭐ 健康檢查路由 (UptimeRobot 專用)
+app.get("/health", (req, res) => res.send("OK"));
 
 // ⭐ 簽約 API
-app.post("/sign", async (req,res)=>{
-    try{
+app.post("/sign", async (req, res) => {
+    try {
         const { name, id, phone, address, signature, time, ip } = req.body;
 
-        if(!signature || !signature.includes("base64")){
+        if (!signature || !signature.includes("base64")) {
             return res.status(400).json({ error: "簽名資料不正確" });
         }
 
         const fontPath = path.join(__dirname, "fonts", "NotoSansTC-Regular.ttf");
-        if(!fs.existsSync(fontPath)) return res.status(500).json({ error: "字體檔缺失" });
+        if (!fs.existsSync(fontPath)) return res.status(500).json({ error: "字體檔缺失" });
 
         const fontBytes = fs.readFileSync(fontPath);
         const pdfDoc = await PDFDocument.create();
         pdfDoc.registerFontkit(fontkit);
         const font = await pdfDoc.embedFont(fontBytes);
 
-        const page = pdfDoc.addPage([595,842]);
+        const page = pdfDoc.addPage([595, 842]);
         const width = page.getWidth();
         let y = 780;
 
         // 標題
         const title = "貸 款 委 任 契 約 書";
         const titleSize = 28;
-        page.drawText(title, { x: (width - font.widthOfTextAtSize(title,titleSize))/2, y, size: titleSize, font, color: rgb(0,0,0.6) });
+        page.drawText(title, { x: (width - font.widthOfTextAtSize(title, titleSize)) / 2, y, size: titleSize, font, color: rgb(0, 0, 0.6) });
         y -= 50;
 
         // 使用者資料
@@ -59,9 +62,9 @@ app.post("/sign", async (req,res)=>{
             `簽署時間: ${time}`,
             `IP: ${ip}`
         ];
-        fields.forEach(f=>{
-            const w = font.widthOfTextAtSize(f,12);
-            page.drawText(f,{x:(width-w)/2, y, size:12, font});
+        fields.forEach(f => {
+            const w = font.widthOfTextAtSize(f, 12);
+            page.drawText(f, { x: (width - w) / 2, y, size: 12, font });
             y -= 18;
         });
         y -= 10;
@@ -69,22 +72,22 @@ app.post("/sign", async (req,res)=>{
         // 合約矩形
         const contractX = 50, contractW = 495, contractH = 300;
         const contractY = y - contractH;
-        page.drawRectangle({ x: contractX, y: contractY, width: contractW, height: contractH, color: rgb(0.97,0.97,0.97), borderColor: rgb(0.8,0.8,0.8), borderWidth:1 });
+        page.drawRectangle({ x: contractX, y: contractY, width: contractW, height: contractH, color: rgb(0.97, 0.97, 0.97), borderColor: rgb(0.8, 0.8, 0.8), borderWidth: 1 });
 
         // 自動換行函式
-        function drawWrappedText(page,text,x,y,maxWidth,font,fontSize,lineHeight){
+        function drawWrappedText(page, text, x, y, maxWidth, font, fontSize, lineHeight) {
             const chars = text.split("");
-            let line="", textY=y;
-            chars.forEach(char=>{
-                const testLine = line+char;
-                if(font.widthOfTextAtSize(testLine,fontSize)>maxWidth){
-                    page.drawText(line,{x,y:textY,size:fontSize,font});
-                    line=char;
-                    textY-=lineHeight;
-                } else line=testLine;
+            let line = "", textY = y;
+            chars.forEach(char => {
+                const testLine = line + char;
+                if (font.widthOfTextAtSize(testLine, fontSize) > maxWidth) {
+                    page.drawText(line, { x, y: textY, size: fontSize, font });
+                    line = char;
+                    textY -= lineHeight;
+                } else line = testLine;
             });
-            if(line) page.drawText(line,{x,y:textY,size:fontSize,font});
-            return textY-lineHeight;
+            if (line) page.drawText(line, { x, y: textY, size: fontSize, font });
+            return textY - lineHeight;
         }
 
         const contractText = `
@@ -102,53 +105,54 @@ app.post("/sign", async (req,res)=>{
 
 七、簽署方式：通訊簽署等同親簽。
 `;
-        let textY = contractY+contractH-20;
-        contractText.split("\n").forEach(line=>{
-            if(line.trim()) textY = drawWrappedText(page,line.trim(),contractX+10,textY,contractW-20,font,12,18)-8;
+        let textY = contractY + contractH - 20;
+        contractText.split("\n").forEach(line => {
+            if (line.trim()) textY = drawWrappedText(page, line.trim(), contractX + 10, textY, contractW - 20, font, 12, 18) - 8;
         });
 
         // 簽名
-        const sigBytes = Buffer.from(signature.split(",")[1],"base64");
+        const sigBytes = Buffer.from(signature.split(",")[1], "base64");
         const sigImage = await pdfDoc.embedPng(sigBytes);
-        page.drawImage(sigImage,{x:100,y:contractY-120,width:400,height:100});
+        page.drawImage(sigImage, { x: 100, y: contractY - 120, width: 400, height: 100 });
 
         // 儲存 PDF
         const pdfBytes = await pdfDoc.save();
         const fileName = `${Date.now()}_${name}.pdf`;
-        const filePath = path.join(signDir,fileName);
-        fs.writeFileSync(filePath,pdfBytes);
+        const filePath = path.join(signDir, fileName);
+        fs.writeFileSync(filePath, pdfBytes);
 
-        res.json({ ok:true, file:fileName });
+        res.json({ ok: true, file: fileName });
 
         // ⭐ 自動寄信到自己
-        if(process.env.EMAIL_USER && process.env.EMAIL_PASS){
-            (async ()=>{
-                try{
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            (async () => {
+                try {
                     const transporter = nodemailer.createTransport({
-                        service:"gmail",
-                        auth:{ user:process.env.EMAIL_USER, pass:process.env.EMAIL_PASS }
+                        service: "gmail",
+                        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
                     });
 
                     await transporter.sendMail({
                         from: process.env.EMAIL_USER,
-                        to: process.env.EMAIL_USER,  // 直接寄給自己
+                        to: process.env.EMAIL_USER,
                         subject: "您的合約PDF",
                         text: "合約PDF已附上，請查收",
-                        attachments:[{filename:fileName,path:filePath}]
+                        attachments: [{ filename: fileName, path: filePath }]
                     });
 
                     console.log("📩 已寄出 PDF");
-                }catch(err){
+                } catch (err) {
                     console.error("寄信錯誤", err);
                 }
             })();
         }
 
-    }catch(err){
+    } catch (err) {
         console.error(err);
-        res.status(500).json({ error:"簽約失敗" });
+        res.status(500).json({ error: "簽約失敗" });
     }
 });
 
-const PORT = process.env.PORT||3000;
-app.listen(PORT,"0.0.0.0",()=>console.log(`🚀 Server running on port ${PORT}`));
+// ⭐ 使用 Render 指定的 PORT
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, "0.0.0.0", () => console.log(`🚀 Server running on port ${PORT}`));
