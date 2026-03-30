@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>貸款委任契約書</title>
-    <link rel="icon" type="image/png" href="/favicon.png">
+<link rel="icon" type="image/png" href="/favicon.png">
 <style>
+
 body {
     font-family: "Noto Sans TC", Arial;
     margin: 0;
@@ -52,7 +53,7 @@ body {
 }
 
 /* 輸入框 */
-input {
+input, select {
     width: 100%;
     padding: 12px;
     margin-bottom: 12px;
@@ -205,24 +206,33 @@ canvas {
     <div class="title">貸 款 委 任 契 約 書</div>
 </div>
 
-<input id="name" placeholder="姓名">
+<!-- 輸入欄位 -->
+<input id="name" placeholder="姓名" oninput="updateContract()">
 <input id="id" placeholder="身分證字號">
 <input id="phone" placeholder="電話">
 <input id="address" placeholder="地址">
 
-<div class="contract-box">
-一、委任期間：自簽約日起三十日止，經雙方書面同意得延展。<br><br>
-二、報酬：約定於撥款後，扣除銀行或融資機構內扣費用後，依核准金額之15%支付乙方顧問服務費，另付諮詢作業費新台幣3,500元整。<br><br>
-三、違約：違約金50,000元，仍須支付服務費。<br><br>
-四、文件與保密：資料需真實，並負保密責任。<br><br>
-五、聯徵查詢：同意查詢信用資料。<br><br>
-六、契約變更終止：須書面同意。<br><br>
-七、簽署方式：通訊簽署等同親簽。
-</div>
+<select id="percent" onchange="updateContract()">
+    <option value="10">顧問費 10%</option>
+    <option value="15" selected>顧問費 15%</option>
+    <option value="20">顧問費 20%</option>
+    <option value="25">顧問費 25%</option>
+    <option value="30">顧問費 30%</option>
+</select>
+
+<select id="consultFee" onchange="updateContract()">
+    <option value="3500">諮詢費 3,500</option>
+    <option value="6000">諮詢費 6,000</option>
+</select>
+
+<input id="remaining" placeholder="尚未收齊差額" oninput="updateContract()">
+
+<!-- 條款區 -->
+<div class="contract-box" id="contractBox"></div>
 
 <div class="agree-row">
-<input type="checkbox" id="agree">
-<label>我已閱讀並同意以上所有條款</label>
+    <input type="checkbox" id="agree">
+    <label>我已閱讀並同意以上所有條款</label>
 </div>
 
 <div class="sign-title">簽名</div>
@@ -238,7 +248,7 @@ let canvas = document.getElementById("sign");
 let ctx = canvas.getContext("2d");
 let drawing = false;
 
-// 計算比例
+// 簽名比例計算
 function getCanvasCoords(e){
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -263,12 +273,37 @@ canvas.addEventListener("touchend",(e)=>{e.preventDefault(); drawing=false; ctx.
 // 清除簽名
 function clearCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height);}
 
+// 動態更新條款
+function updateContract(){
+    const name = document.getElementById("name").value || "________";
+    const percent = document.getElementById("percent").value;
+    const fee = document.getElementById("consultFee").value;
+    const remaining = document.getElementById("remaining").value || "0";
+
+    document.getElementById("contractBox").innerHTML = `
+    甲方：將御線上理財平臺<br>
+    乙方：${name}<br><br>
+    一、委任期間：自簽約日起三十日止，經雙方書面同意得延展。<br><br>
+    二、報酬：約定於撥款後，扣除銀行或融資機構內扣費用後，
+    依核准金額之 <b>${percent}%</b> 支付乙方顧問服務費，
+    另付諮詢作業費新台幣 <b>${fee}</b> 元整，
+    尚未收齊差額為 <b>${remaining}</b> 元。<br><br>
+    三、違約：違約金50,000元，仍須支付服務費。<br><br>
+    四、文件與保密：資料需真實，並負保密責任。<br><br>
+    五、聯徵查詢：同意查詢信用資料。<br><br>
+    六、契約變更終止：須書面同意。<br><br>
+    七、簽署方式：通訊簽署等同親簽。
+    `;
+}
+
+// 頁面載入時先更新一次
+updateContract();
+
 // 提交表單
 async function submitForm(){
     if(!document.getElementById("agree").checked){ alert("請先同意條款"); return; }
     if(canvas.toDataURL().length < 5000){ alert("請簽名"); return; }
 
-    // 顯示 loading
     document.getElementById("loadingOverlay").style.display="block";
 
     let data={
@@ -276,6 +311,9 @@ async function submitForm(){
         id:document.getElementById("id").value,
         phone:document.getElementById("phone").value,
         address:document.getElementById("address").value,
+        percent:document.getElementById("percent").value,
+        consultFee:document.getElementById("consultFee").value,
+        remaining:document.getElementById("remaining").value,
         signature:canvas.toDataURL(),
         time:new Date().toLocaleString(),
         ip:"127.0.0.1"
@@ -289,7 +327,6 @@ async function submitForm(){
         });
         const result=await resp.json();
         if(resp.ok && result.ok){
-            // 下載 PDF 按鈕
             const a=document.createElement("a");
             a.href="/sign_data/"+result.file;
             a.download=result.file;
