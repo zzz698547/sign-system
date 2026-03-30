@@ -20,11 +20,27 @@ if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.warn("⚠️ 請設定 EMAIL_USER / EMAIL_PASS");
 }
 
+// ⭐ 記錄服務啟動時間 (Uptime 計算用)
+const serverStartTime = new Date();
+
 // ⭐ 首頁
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-// ⭐ 健康檢查路由 (UptimeRobot 專用)
-app.get("/health", (req, res) => res.send("OK"));
+// ⭐ 健康檢查路由 (Uptime + JSON)
+app.get("/health", (req, res) => {
+    const now = new Date();
+    const uptimeMs = now - serverStartTime;
+    const uptimeSec = Math.floor(uptimeMs / 1000);
+    const hours = Math.floor(uptimeSec / 3600);
+    const minutes = Math.floor((uptimeSec % 3600) / 60);
+    const seconds = uptimeSec % 60;
+
+    res.json({
+        status: "OK",
+        uptime: `${hours}h ${minutes}m ${seconds}s`,
+        timestamp: now.toISOString()
+    });
+});
 
 // ⭐ 簽約 API
 app.post("/sign", async (req, res) => {
@@ -92,17 +108,11 @@ app.post("/sign", async (req, res) => {
 
         const contractText = `
 一、委任期間：自簽約日起三十日止，經雙方書面同意得延展。
-
 二、報酬：約定於撥款後，扣除銀行或融資機構內扣費用後，依核准金額之15%支付乙方顧問服務費，另付諮詢作業費新台幣3,500元整。
-
 三、違約：違約金50,000元，仍須支付服務費。
-
 四、文件與保密：資料需真實，並負保密責任。
-
 五、聯徵查詢：同意查詢信用資料。
-
 六、契約變更終止：須書面同意。
-
 七、簽署方式：通訊簽署等同親簽。
 `;
         let textY = contractY + contractH - 20;
